@@ -32,6 +32,12 @@ import java.net.UnknownHostException
 
 private const val TAG = "BaseRepository"
 
+/**
+ *
+ * This class handles the exceptions that can be raised if some network error occurs, during the
+ * public certificates download.
+ *
+ */
 abstract class BaseRepository(private val dispatcherProvider: DispatcherProvider) : Repository {
 
     suspend fun <P> execute(doOnAsyncBlock: suspend () -> P): P? {

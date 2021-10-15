@@ -48,8 +48,8 @@ class LoadKeysWorker @AssistedInject constructor(
 
     /**
      *
-     * This method represents the periodic asynchronously  work that the Work Manager accomplishes
-     * each 1 day on the background.
+     * This method represents the periodic asynchronously work that the Work Manager accomplishes
+     * each 1 day on the background, for the KIDS download.
      *
      */
     override suspend fun doWork(): Result {
