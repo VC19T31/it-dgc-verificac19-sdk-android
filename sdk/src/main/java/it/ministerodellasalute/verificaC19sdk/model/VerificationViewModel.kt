@@ -22,6 +22,7 @@
 
 package it.ministerodellasalute.verificaC19sdk.model
 import android.annotation.SuppressLint
+import android.os.AsyncTask
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -43,6 +44,8 @@ import it.ministerodellasalute.verificaC19sdk.BuildConfig
 import it.ministerodellasalute.verificaC19sdk.VerificaMinSDKVersionException
 import it.ministerodellasalute.verificaC19sdk.VerificaMinVersionException
 import it.ministerodellasalute.verificaC19sdk.data.VerifierRepository
+import it.ministerodellasalute.verificaC19sdk.data.local.AppDatabase
+import it.ministerodellasalute.verificaC19sdk.data.local.Blacklist
 import it.ministerodellasalute.verificaC19sdk.data.local.Preferences
 import it.ministerodellasalute.verificaC19sdk.data.remote.model.Rule
 import it.ministerodellasalute.verificaC19sdk.di.DispatcherProvider
@@ -69,7 +72,8 @@ class VerificationViewModel @Inject constructor(
     private val cborService: CborService,
     private val verifierRepository: VerifierRepository,
     private val preferences: Preferences,
-    private val dispatcherProvider: DispatcherProvider
+    private val dispatcherProvider: DispatcherProvider,
+    private val db: AppDatabase
 ) : ViewModel() {
 
     private val _certificate = MutableLiveData<CertificateSimple?>()
@@ -137,33 +141,60 @@ class VerificationViewModel @Inject constructor(
             _inProgress.value = false
             val certificateModel = greenCertificate.toCertificateModel(verificationResult)
 
-            var certificateSimple=  CertificateSimple()
-            certificateSimple?.person?.familyName = certificateModel.person?.familyName
-            certificateSimple?.person?.standardisedFamilyName = certificateModel.person?.standardisedFamilyName
-            certificateSimple?.person?.givenName = certificateModel.person?.givenName
-            certificateSimple?.person?.standardisedGivenName = certificateModel.person?.standardisedGivenName
-            certificateSimple?.dateOfBirth = certificateModel.dateOfBirth
-            if(fullModel == false) {
-                if (getCertificateStatus(certificateModel) == CertificateStatus.NOT_VALID_YET)
-                {
-                    certificateSimple?.certificateStatus = CertificateStatus.NOT_VALID
-                }
-                else if (getCertificateStatus(certificateModel) == CertificateStatus.PARTIALLY_VALID)
-                {
-                    certificateSimple?.certificateStatus = CertificateStatus.VALID
-                }
-                else{
-                    certificateSimple?.certificateStatus = getCertificateStatus(certificateModel)
-                }
+
+            var certificateIdentifier = ""
+
+            if (greenCertificate?.vaccinations?.get(0)?.certificateIdentifier != null) {
+                certificateIdentifier =
+                    greenCertificate?.vaccinations?.get(0)?.certificateIdentifier!!
+            } else if (greenCertificate?.tests?.get(0)?.certificateIdentifier != null) {
+                certificateIdentifier = greenCertificate?.tests?.get(0)?.certificateIdentifier!!
+            } else if (greenCertificate?.recoveryStatements?.get(0)?.certificateIdentifier != null) {
+                certificateIdentifier =
+                    greenCertificate?.recoveryStatements?.get(0)?.certificateIdentifier!!
             }
-            else { //show full model
+
+
+            var certificateSimple = CertificateSimple()
+            certificateSimple?.person?.familyName = certificateModel.person?.familyName
+            certificateSimple?.person?.standardisedFamilyName =
+                certificateModel.person?.standardisedFamilyName
+            certificateSimple?.person?.givenName = certificateModel.person?.givenName
+            certificateSimple?.person?.standardisedGivenName =
+                certificateModel.person?.standardisedGivenName
+            certificateSimple?.dateOfBirth = certificateModel.dateOfBirth
+            if (checkPresenceInBlacklist(certificateIdentifier) == true)
+            {
+                certificateSimple?.certificateStatus = CertificateStatus.NOT_VALID
+            }
+            else if (fullModel == false) {
+                if (getCertificateStatus(certificateModel) == CertificateStatus.NOT_VALID_YET) {
+                    certificateSimple?.certificateStatus = CertificateStatus.NOT_VALID
+                } else if (getCertificateStatus(certificateModel) == CertificateStatus.PARTIALLY_VALID) {
+                    certificateSimple?.certificateStatus = CertificateStatus.VALID
+                } else {
+                    certificateSimple?.certificateStatus =
+                        getCertificateStatus(certificateModel)
+                }
+            } else { //show full model
                 certificateSimple?.certificateStatus = getCertificateStatus(certificateModel)
             }
             certificateSimple?.timeStamp = Date(System.currentTimeMillis())
 
             _certificate.value = certificateSimple
+
         }
     }
+
+      fun checkPresenceInBlacklist(certificateIdentifier: String): Boolean? {
+         var blacklistedCertificate: Blacklist? = null
+             try {
+                 blacklistedCertificate = db.blackListDao().getById(certificateIdentifier)
+               } catch (e: java.lang.Exception) {
+                 Log.i("error", e.localizedMessage)
+             }
+          return blacklistedCertificate != null
+     }
 
     private fun getValidationRules(): Array<Rule> {
         val jsonString = preferences.validationRulesJson
