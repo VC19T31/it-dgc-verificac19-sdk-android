@@ -141,20 +141,6 @@ class VerificationViewModel @Inject constructor(
             _inProgress.value = false
             val certificateModel = greenCertificate.toCertificateModel(verificationResult)
 
-
-            var certificateIdentifier = ""
-
-            if (greenCertificate?.vaccinations?.get(0)?.certificateIdentifier != null) {
-                certificateIdentifier =
-                    greenCertificate?.vaccinations?.get(0)?.certificateIdentifier!!
-            } else if (greenCertificate?.tests?.get(0)?.certificateIdentifier != null) {
-                certificateIdentifier = greenCertificate?.tests?.get(0)?.certificateIdentifier!!
-            } else if (greenCertificate?.recoveryStatements?.get(0)?.certificateIdentifier != null) {
-                certificateIdentifier =
-                    greenCertificate?.recoveryStatements?.get(0)?.certificateIdentifier!!
-            }
-
-
             var certificateSimple = CertificateSimple()
             certificateSimple?.person?.familyName = certificateModel.person?.familyName
             certificateSimple?.person?.standardisedFamilyName =
@@ -163,7 +149,13 @@ class VerificationViewModel @Inject constructor(
             certificateSimple?.person?.standardisedGivenName =
                 certificateModel.person?.standardisedGivenName
             certificateSimple?.dateOfBirth = certificateModel.dateOfBirth
-            if (checkPresenceInBlacklist(certificateIdentifier) == true)
+
+            var certificateIdentifier = extractUVCI(greenCertificate)
+            if (certificateIdentifier == null || certificateIdentifier == "")
+            {
+                certificateSimple?.certificateStatus = CertificateStatus.NOT_VALID
+            }
+            else if (checkPresenceInBlacklist(certificateIdentifier) == true)
             {
                 certificateSimple?.certificateStatus = CertificateStatus.NOT_VALID
             }
@@ -186,7 +178,22 @@ class VerificationViewModel @Inject constructor(
         }
     }
 
-      fun checkPresenceInBlacklist(certificateIdentifier: String): Boolean? {
+    private fun extractUVCI(greenCertificate: GreenCertificate?): String {
+        var certificateIdentifier = ""
+
+        if (greenCertificate?.vaccinations?.get(0)?.certificateIdentifier != null) {
+            certificateIdentifier =
+                greenCertificate?.vaccinations?.get(0)?.certificateIdentifier!!
+        } else if (greenCertificate?.tests?.get(0)?.certificateIdentifier != null) {
+            certificateIdentifier = greenCertificate?.tests?.get(0)?.certificateIdentifier!!
+        } else if (greenCertificate?.recoveryStatements?.get(0)?.certificateIdentifier != null) {
+            certificateIdentifier =
+                greenCertificate?.recoveryStatements?.get(0)?.certificateIdentifier!!
+        }
+        return certificateIdentifier
+    }
+
+    fun checkPresenceInBlacklist(certificateIdentifier: String): Boolean? {
          var blacklistedCertificate: Blacklist? = null
              try {
                  blacklistedCertificate = db.blackListDao().getById(certificateIdentifier)
