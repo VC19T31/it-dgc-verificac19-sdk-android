@@ -338,7 +338,7 @@ class VerificationViewModel @Inject constructor(
      *
      */
     private fun isBlacklisted(it: String): Boolean {
-        return getBlacklist().split(";").contains("$it;")
+        return getBlacklist().split(";").contains(it)
     }
 
     /**
