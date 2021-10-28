@@ -131,11 +131,13 @@ class VerificationViewModel @Inject constructor(
 //                // Load from API for now. Replace with cache logic.
                 val certificate = verifierRepository.getCertificate(kid.toBase64())
 
-                if (certificate == null) {
+                if (certificate != null) {
                     Log.d(TAG, "Verification failed: failed to load certificate")
                     return@withContext
                 }
-                cryptoService.validate(cose, certificate, verificationResult)
+                if (certificate != null) {
+                    cryptoService.validate(cose, certificate, verificationResult)
+                }
             }
 
             _inProgress.value = false
