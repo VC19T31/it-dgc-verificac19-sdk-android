@@ -38,5 +38,5 @@ object LocalDataSourceModule {
     @Singleton
     @Provides
     fun provideDb(@ApplicationContext context: Context): AppDatabase =
-        Room.databaseBuilder(context, AppDatabase::class.java, "key-db").allowMainThreadQueries().build()
+        Room.databaseBuilder(context, AppDatabase::class.java, "key-db").build()
 }

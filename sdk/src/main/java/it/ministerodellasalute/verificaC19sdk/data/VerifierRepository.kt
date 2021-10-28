@@ -30,4 +30,5 @@ interface VerifierRepository {
     suspend fun syncData(): Boolean?
     suspend fun getCertificate(kid: String): Certificate?
     fun getCertificateFetchStatus(): LiveData<Boolean>
+    suspend fun checkInBlackList(kid: String): Boolean?
 }

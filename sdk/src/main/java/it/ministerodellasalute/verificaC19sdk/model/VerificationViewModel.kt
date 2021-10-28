@@ -151,11 +151,13 @@ class VerificationViewModel @Inject constructor(
             certificateSimple?.dateOfBirth = certificateModel.dateOfBirth
 
             var certificateIdentifier = extractUVCI(greenCertificate)
+            val blackListCheckResult = verifierRepository.checkInBlackList(certificateIdentifier)
+
             if (certificateIdentifier == null || certificateIdentifier == "")
             {
                 certificateSimple?.certificateStatus = CertificateStatus.NOT_VALID
             }
-            else if (checkPresenceInBlacklist(certificateIdentifier) == true)
+            else if (blackListCheckResult== true)
             {
                 certificateSimple?.certificateStatus = CertificateStatus.NOT_VALID
             }
@@ -193,7 +195,7 @@ class VerificationViewModel @Inject constructor(
         return certificateIdentifier
     }
 
-    fun checkPresenceInBlacklist(certificateIdentifier: String): Boolean? {
+    /*fun checkPresenceInBlacklist(certificateIdentifier: String): Boolean? {
          var blacklistedCertificate: Blacklist? = null
              try {
                  blacklistedCertificate = db.blackListDao().getById(certificateIdentifier)
@@ -201,7 +203,7 @@ class VerificationViewModel @Inject constructor(
                  Log.i("error", e.localizedMessage)
              }
           return blacklistedCertificate != null
-     }
+     }*/
 
     private fun getValidationRules(): Array<Rule> {
         val jsonString = preferences.validationRulesJson

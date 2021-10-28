@@ -137,6 +137,24 @@ class VerifierRepositoryImpl @Inject constructor(
             .base64ToX509Certificate() else null
     }
 
+    override suspend fun checkInBlackList(ucvi: String): Boolean?
+    {
+        try {
+
+        val black = db.blackListDao().getById(ucvi)
+        if (black == null)
+            return false
+        else
+            return true
+        }
+        catch (e: Exception)
+        {
+            Log.i("TAG", e.localizedMessage)
+            return false
+        }
+
+    }
+
     override fun getCertificateFetchStatus(): LiveData<Boolean> {
         return fetchStatus
     }
