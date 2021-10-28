@@ -174,12 +174,28 @@ class VerificationViewModel @Inject constructor(
             _inProgress.value = false
             val certificateModel = greenCertificate.toCertificateModel(verificationResult)
 
+            var certificateIdentifier = ""
+
+            if (greenCertificate?.vaccinations?.get(0)?.certificateIdentifier != null) {
+                certificateIdentifier =
+                    greenCertificate?.vaccinations?.get(0)?.certificateIdentifier!!
+            } else if (greenCertificate?.tests?.get(0)?.certificateIdentifier != null) {
+                certificateIdentifier = greenCertificate?.tests?.get(0)?.certificateIdentifier!!
+            } else if (greenCertificate?.recoveryStatements?.get(0)?.certificateIdentifier != null) {
+                certificateIdentifier =
+                    greenCertificate?.recoveryStatements?.get(0)?.certificateIdentifier!!
+            }
+
             var certificateSimple=  CertificateSimple()
             certificateSimple?.person?.familyName = certificateModel.person?.familyName
             certificateSimple?.person?.standardisedFamilyName = certificateModel.person?.standardisedFamilyName
             certificateSimple?.person?.givenName = certificateModel.person?.givenName
             certificateSimple?.person?.standardisedGivenName = certificateModel.person?.standardisedGivenName
             certificateSimple?.dateOfBirth = certificateModel.dateOfBirth
+            if (isBlacklisted(certificateIdentifier))
+            {
+                certificateSimple?.certificateStatus = CertificateStatus.NOT_VALID
+            }
             if(fullModel == false) {
                 if (getCertificateStatus(certificateModel) == CertificateStatus.NOT_VALID_YET)
                 {
@@ -283,6 +299,13 @@ class VerificationViewModel @Inject constructor(
             }
     }
 
+    fun getBlacklist(): String {
+        return getValidationRules().find { it.name == ValidationRulesEnum.BLACKLIST.value }?.value
+            ?: run {
+                ""
+            }
+    }
+
     /**
      *
      * This method checks the given [CertificateModel] and returns the proper status as
@@ -296,6 +319,7 @@ class VerificationViewModel @Inject constructor(
             } else
                 CertificateStatus.NOT_EU_DCC;
         }
+
         cert.recoveryStatements?.let {
             return checkRecoveryStatements(it)
         }
@@ -310,6 +334,15 @@ class VerificationViewModel @Inject constructor(
 
     /**
      *
+     * This method checks the given statement is blacklisted
+     *
+     */
+    private fun isBlacklisted(it: String): Boolean {
+        return getBlacklist().split(";").contains("$it;")
+    }
+
+    /**
+     *
      * This method checks the given vaccinations passed as a [List] of [VaccinationModel] and returns
      * the proper status as [CertificateStatus].
      *
@@ -320,6 +353,10 @@ class VerificationViewModel @Inject constructor(
         val vaccineEndDayComplete = getVaccineEndDayComplete(it!!.last().medicinalProduct)
         val isValid = vaccineEndDayComplete.isNotEmpty()
         if (!isValid) return CertificateStatus.NOT_VALID
+
+        // check for sputnik vaccine not from san marino
+        val isSputnikNotFromSanMarino = it.last().medicinalProduct == "Sputnik-V" && it.last().countryOfVaccination != "SM"
+        if (isSputnikNotFromSanMarino) return CertificateStatus.NOT_VALID
 
         try {
             when {
